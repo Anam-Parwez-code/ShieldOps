@@ -1,41 +1,59 @@
 from django.db import models
-from django.contrib.auth.models import User
-from django.conf import settings
+from django.contrib.auth.models import AbstractUser
 
-class CyberVulnerability(models.Model):
-    SEVERITY_CHOICES = [
-        ('CRITICAL', 'Critical Risk'),
-        ('HIGH', 'High Risk'),
-        ('MEDIUM', 'Medium Risk'),
-        ('PATCHED_SECURED', 'Patched & Secured'),
-    ]
-    
-    # Runtime compliance evaluation
-    if getattr(settings, 'GULF_MODE', False):
-        COMPLIANCE_STANDARDS = [
-            ('KSA_NCA_2026', 'KSA National Cybersecurity Authority Compliance'),
-            ('UAE_NESA', 'UAE National Electronic Security Authority Policy'),
-        ]
-    else:
-        COMPLIANCE_STANDARDS = [
-            ('ISO_27001', 'ISO/IEC 27001 Global Information Security Standard'),
-            ('SOC_2', 'SOC 2 Corporate Operational Trust Principles'),
-        ]
+# Custom User with Roles
+class User(AbstractUser):
+    ROLE_CHOICES = (
+        ('ADMIN', 'Admin'),
+        ('MANAGER', 'Manager'),
+        ('CASHIER', 'Cashier'),
+        ('SECURITY_AUDITOR', 'Security Auditor'),
+    )
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='CASHIER')
 
-    assigned_to = models.ForeignKey(User, on_delete=models.CASCADE, related_name='vulnerabilities')
-    
-    # Tracking Attributes
+# Vulnerability Tracker (Audit Tools)
+class Vulnerability(models.Model):
     threat_title = models.CharField(max_length=255)
-    compliance_framework = models.CharField(max_length=30, choices=COMPLIANCE_STANDARDS)
-    description = models.TextField()
+    target_date = models.DateField()
+    status = models.CharField(max_length=50, default='CRITICAL')
+    completion_date = models.DateField(null=True, blank=True)
+    remarks = models.TextField(null=True, blank=True)
     
-   
-    target_date = models.DateField(help_text="Mandatory fixing deadline (SLA)")
-    completion_date = models.DateField(blank=True, null=True, help_text="Actual patch deployment timeline")
-    status = models.CharField(max_length=30, choices=SEVERITY_CHOICES, default='CRITICAL')
-    remarks = models.TextField(blank=True, null=True, help_text="Audit and patch deployment log notes")
-    
+    # Is field ka naam assigned_auditor se badal kar assigned_to kar diya taaki views se clash na ho
+    assigned_to = models.ForeignKey(User, on_delete=models.CASCADE, related_name='threats')
+# Core Bank Management Entities
+class Customer(models.Model):
+    first_name = models.CharField(max_length=100)
+    last_name = models.CharField(max_length=100)
+    email = models.EmailField(unique=True)
+    phone = models.CharField(max_length=15)
+    kyc_status = models.CharField(max_length=20, default='PENDING_VERIFICATION')
     created_at = models.DateTimeField(auto_now_add=True)
 
-    def __str__(self):
-        return f"{self.threat_title} - {self.status}"
+class BankAccount(models.Model):
+    ACCOUNT_TYPES = (('SAVINGS', 'Savings'), ('CURRENT', 'Current'))
+    customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name='accounts')
+    account_number = models.CharField(max_length=20, unique=True)
+    account_type = models.CharField(max_length=10, choices=ACCOUNT_TYPES, default='SAVINGS')
+    balance = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
+    is_active = models.BooleanField(default=True)
+
+class BankTransaction(models.Model):
+    account = models.ForeignKey(BankAccount, on_delete=models.CASCADE, related_name='transactions')
+    transaction_type = models.CharField(max_length=20) # DEPOSIT, WITHDRAWAL
+    amount = models.DecimalField(max_digits=12, decimal_places=2)
+    counter_id = models.CharField(max_length=20, null=True, blank=True)
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+class BankCard(models.Model):
+    account = models.ForeignKey(BankAccount, on_delete=models.CASCADE, related_name='cards')
+    card_number = models.CharField(max_length=19, unique=True)
+    card_type = models.CharField(max_length=20, default='VISA_PLATINUM')
+    is_blocked = models.BooleanField(default=False)
+    block_reason = models.CharField(max_length=255, null=True, blank=True)
+
+class AuditLog(models.Model):
+    event_type = models.CharField(max_length=50)
+    ip_address = models.GenericIPAddressField()
+    severity = models.CharField(max_length=10, default='LOW')
+    timestamp = models.DateTimeField(auto_now_add=True)

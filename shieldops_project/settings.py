@@ -3,10 +3,10 @@ import os
 from pathlib import Path
 from datetime import timedelta
 
-
 GLOBAL_SITE_PACKAGES = r"C:\Users\Anam Parwez\AppData\Local\Programs\Python\Python314\Lib\site-packages"
 if GLOBAL_SITE_PACKAGES not in sys.path:
     sys.path.insert(0, GLOBAL_SITE_PACKAGES)
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = 'django-insecure-shieldops-super-secret-key-2026'
@@ -21,12 +21,12 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     
-   
+    # Third Party Packages
     'rest_framework',
     'rest_framework_simplejwt',
     'rest_framework_simplejwt.token_blacklist', # Security requirement for Logouts
     
-    
+    # Local Apps
     'tracker_api',
 ]
 
@@ -49,6 +49,7 @@ DATABASES = {
         'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
+
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
@@ -79,13 +80,11 @@ TIME_ZONE = 'UTC'
 USE_I18N = True
 USE_TZ = True
 
-
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     )
 }
-
 
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=15),
@@ -97,7 +96,11 @@ SIMPLE_JWT = {
     'SIGNING_KEY': SECRET_KEY,
 }
 
-
 GULF_MODE = False  
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# ==============================================================================
+# CUSTOM USER MODEL CONFIGURATION (CRITICAL FOR FIXING GROUPS/PERMISSIONS CLASH)
+# ==============================================================================
+AUTH_USER_MODEL = 'tracker_api.User'
